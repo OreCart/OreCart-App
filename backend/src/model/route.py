@@ -1,6 +1,5 @@
 from sqlalchemy import UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
 from src.db import Base
 from src.model.waypoint import Waypoint  # pylint: disable=unused-import
 

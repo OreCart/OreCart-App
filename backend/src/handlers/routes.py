@@ -6,14 +6,16 @@ import re
 from datetime import datetime, timezone
 from typing import Annotated, Optional
 
+import pygeoif
 from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse
+from fastkml import kml
 from pydantic import BaseModel
-
 from src.model.alert import Alert
 from src.model.route import Route
 from src.model.route_disable import RouteDisable
 from src.model.route_stop import RouteStop
+from src.model.stop import Stop
 from src.model.waypoint import Waypoint
 from src.request import process_include
 
@@ -166,31 +168,69 @@ def is_route_active(route_id: int, alert: Optional[Alert], session) -> bool:
 
 
 @router.post("/")
-async def create_route(
-    req: Request, name: str = Form(...), kml: Optional[UploadFile] = File(None)
-):
+async def create_route(req: Request, kml_file: UploadFile):
     """
     Creates a new route.
     """
 
     with req.app.state.db.session() as session:
-        route = Route(name=name)
-        session.add(route)
-        session.commit()
+        contents: bytes = await kml_file.read()
 
-        if kml:
-            contents = await kml.read()
+        contents = contents.decode("utf-8").encode("ascii")
 
-            latlons = kml_to_waypoints(contents)[:-1]
+        routes = {}
+        stops = {}
 
-            for latlon in latlons:
-                print(latlon)
-                waypoint = Waypoint(route_id=route.id, lat=latlon[0], lon=latlon[1])
+        route_routeid_map = {}
+
+        k = kml.KML()
+        k.from_string(contents)
+
+        for feature_list in k.features():
+            for feature in feature_list.features():
+                if type(feature.geometry) == pygeoif.geometry.Polygon:
+                    routes[feature.name] = feature
+                elif type(feature.geometry) == pygeoif.geometry.Point:
+                    stops[feature.name] = feature
+                else:
+                    return HTTPException(status_code=400, detail="bad kml file")
+
+        for route_name, route in routes.items():
+            route_model = Route(name=route_name)
+            session.add(route_model)
+            session.flush()
+
+            route_routeid_map[route_name] = route_model.id
+
+            for coords in route.geometry.exterior.coords:
+                waypoint = Waypoint(
+                    route_id=route_model.id, lat=coords[1], lon=coords[0]
+                )
                 session.add(waypoint)
+                session.flush()
 
-            await kml.close()
+        for stop_name, stop in stops.items():
+            stop_model = Stop(
+                name=stop_name, lat=stop.geometry.y, lon=stop.geometry.x, active=True
+            )
+            session.add(stop_model)
+            session.flush()
 
-            session.commit()
+            routes_regex_pattern = r"<div>(.*?)<br><\/div>"
+            matches = re.findall(routes_regex_pattern, str(stop.description))
+
+            for match in matches:
+                if match not in route_routeid_map:
+                    return HTTPException(status_code=400, detail="bad kml file")
+                route_stop = RouteStop(
+                    route_id=route_routeid_map[match], stop_id=stop_model.id
+                )
+                session.add(route_stop)
+                session.flush()
+
+        await kml_file.close()
+
+        session.commit()
 
     return JSONResponse(status_code=200, content={"message": "OK"})
 

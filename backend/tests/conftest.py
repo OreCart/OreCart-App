@@ -6,7 +6,6 @@ import pytest
 from pydantic import BaseModel
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
 from src.db import Base
 
 

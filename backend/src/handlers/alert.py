@@ -4,7 +4,6 @@ from typing import Dict, List, Union
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-
 from src.model.alert import Alert
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])

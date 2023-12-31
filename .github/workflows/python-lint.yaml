@@ -15,14 +15,9 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: "3.10.13"
-      - run: pip install -r ./requirements.txt
-        working-directory: ./backend
-      - run: black --check --diff ./
-        working-directory: ./backend
-      - run: isort --profile black --check --diff ./
-        working-directory: ./backend
-      - run: mypy ./
-        working-directory: ./backend
-      - run: pylint --rcfile ./backend/pylintrc -E ./backend
-      - run: pytest ./
-        working-directory: ./backend
+      - run: pip install -r ./backend/requirements.txt
+      - run: black --check --diff ./backend/
+      - run: isort --profile black --check --diff ./backend/
+      - run: mypy ./backend/
+      - run: pylint --rcfile ./backend/pylintrc -E ./backend/
+      - run: pytest ./backend/

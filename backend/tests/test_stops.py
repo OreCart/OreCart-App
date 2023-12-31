@@ -2,7 +2,6 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
-
 from src.handlers.stops import StopModel, create_stop, get_stop, get_stops, update_stop
 from src.model.alert import Alert
 from src.model.route import Route
