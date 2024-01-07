@@ -32,16 +32,45 @@ const App = (): React.JSX.Element => (
     <SafeAreaProvider style={LayoutStyle.fill}>
       <View style={LayoutStyle.fill}>
         <NavigationContainer>
-          <Stack.Navigator>
+          <Stack.Navigator
+            screenOptions={{
+              headerStyle: {
+                shadowColor: "#000",
+                shadowOffset: {
+                  width: 0,
+                  height: 4,
+                },
+                shadowOpacity: 0.3,
+                shadowRadius: 4.65,
+              },
+              cardStyle: { backgroundColor: Color.generic.white },
+            }}
+          >
             <Stack.Screen
               name="Home"
               component={Home}
               options={{ headerShown: false }}
             />
-            <Stack.Screen name="Alerts" component={AlertScreen} />
-            <Stack.Screen name="ADARequest" component={ADARequestScreen} />
-            <Stack.Screen name="BugReport" component={BugReportScreen} />
-            <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen
+              name="Alerts"
+              component={AlertScreen}
+              options={{ title: "Upcoming Alerts" }}
+            />
+            <Stack.Screen
+              name="ADARequest"
+              component={ADARequestScreen}
+              options={{ title: "ADA Ride Request" }}
+            />
+            <Stack.Screen
+              name="BugReport"
+              component={BugReportScreen}
+              options={{ title: "Bug Report" }}
+            />
+            <Stack.Screen
+              name="Settings"
+              component={SettingsScreen}
+              options={{ title: "Settings" }}
+            />
           </Stack.Navigator>
         </NavigationContainer>
       </View>

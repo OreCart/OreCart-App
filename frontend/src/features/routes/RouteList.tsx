@@ -1,16 +1,9 @@
 import React from "react";
-import {
-  FlatList,
-  StyleSheet,
-  Text,
-  TouchableHighlight,
-  View,
-  type ViewProps,
-} from "react-native";
+import { FlatList, StyleSheet, Text, View, type ViewProps } from "react-native";
 
 import Divider from "../../common/components/Divider";
+import RetryButton from "../../common/components/RetryButton";
 import SkeletonList from "../../common/components/SkeletonList";
-import Color from "../../common/style/color";
 import LayoutStyle from "../../common/style/layout";
 
 import { RouteItem, RouteItemSkeleton } from "./RouteItem";
@@ -43,6 +36,7 @@ const RouteList = ({ onPress }: RouteListProps): React.JSX.Element => {
       {isLoading ? (
         <SkeletonList
           style={styles.routeContainer}
+          divider={true}
           generator={() => <RouteItemSkeleton />}
         />
       ) : isSuccess ? (
@@ -60,13 +54,7 @@ const RouteList = ({ onPress }: RouteListProps): React.JSX.Element => {
           <Text style={styles.header}>
             We couldn't fetch the routes right now. Try again later.
           </Text>
-          <TouchableHighlight
-            style={styles.retryButton}
-            onPress={retry}
-            underlayColor={Color.csm.primary.ext.blaster_blue_highlight}
-          >
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </TouchableHighlight>
+          <RetryButton retry={retry} />
         </View>
       ) : null}
     </View>
@@ -83,16 +71,6 @@ const styles = StyleSheet.create({
   header: {
     textAlign: "center",
     paddingBottom: 16,
-  },
-  retryButton: {
-    borderRadius: 100,
-    backgroundColor: Color.csm.primary.blaster_blue,
-    padding: 10,
-    alignItems: "center",
-  },
-  retryButtonText: {
-    color: Color.generic.white,
-    fontWeight: "500",
   },
 });
 

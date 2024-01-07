@@ -2,6 +2,7 @@ import React from "react";
 import { View, type ViewProps } from "react-native";
 
 import Divider from "./Divider";
+import Spacer from "./Spacer";
 
 /**
  * The props for the {@interface SkeletonList} component.
@@ -9,12 +10,17 @@ import Divider from "./Divider";
 interface SkeletonProps extends ViewProps {
   /** Returns the skeleton item to render. */
   generator: () => React.ReactNode;
+  /** Whether to show a divider or a spacer */
+  divider: boolean;
 }
 
 /**
  * A component that renders a list of skeleton items with decreasing opacity.
  */
-const SkeletonList = ({ generator }: SkeletonProps): React.JSX.Element => {
+const SkeletonList = ({
+  generator,
+  divider,
+}: SkeletonProps): React.JSX.Element => {
   return (
     <>
       {/* for (i = 0; i < 3; ++i) */}
@@ -24,7 +30,7 @@ const SkeletonList = ({ generator }: SkeletonProps): React.JSX.Element => {
           {generator()}
           {/* Add a divider between each item, except the last one, 
           to be consistent with FlatList */}
-          {index < 2 ? <Divider /> : null}
+          {index < 2 ? divider ? <Divider /> : <Spacer /> : null}
         </View>
       ))}
     </>

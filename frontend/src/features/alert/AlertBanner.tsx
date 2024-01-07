@@ -11,7 +11,7 @@ import {
 import Spacer from "../../common/components/Spacer";
 import Color from "../../common/style/color";
 
-import AlertItem from "./AlertItem";
+import { AlertItem } from "./AlertItem";
 import { useGetActiveAlertsQuery } from "./alertSlice";
 
 /**

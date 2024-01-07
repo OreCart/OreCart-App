@@ -25,8 +25,13 @@ const alertsApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
     getActiveAlerts: builder.query<Alerts, void>({
-      query: () => "/alerts/?active=true",
-      providesTags: ["Alerts"],
+      query: () => "/alerts/?filter=active",
+      providesTags: ["ActiveAlerts"],
+    }),
+    // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
+    getFutureAlerts: builder.query<Alerts, void>({
+      query: () => "/alerts/?filter=future",
+      providesTags: ["FutureAlerts"],
     }),
   }),
 });
@@ -34,4 +39,5 @@ const alertsApiSlice = apiSlice.injectEndpoints({
 /**
  * Hook for querying the list of active alerts.
  */
-export const { useGetActiveAlertsQuery } = alertsApiSlice;
+export const { useGetActiveAlertsQuery, useGetFutureAlertsQuery } =
+  alertsApiSlice;
