@@ -2,16 +2,20 @@ import asyncio
 import json
 import struct
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional, Set, Union
+from typing import Annotated, Dict, List, Optional, Set, Union
 
-from fastapi import APIRouter, HTTPException, Query, Request, WebSocket
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, WebSocket
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
+from sqlalchemy.sql.expression import select
+from src.auth.make_async import make_async
+from src.auth.user_manager import current_user
 from src.hardware import HardwareErrorCode, HardwareHTTPException, HardwareOKResponse
 from src.model.route import Route
 from src.model.route_stop import RouteStop
 from src.model.stop import Stop
+from src.model.user import User
 from src.model.van import Van
 from src.request import process_include
 from src.vantracking.coordinate import Coordinate
@@ -47,21 +51,23 @@ INCLUDES: Set[str] = {
 
 
 @router.get("/")
+@make_async
 def get_vans(
     req: Request, include: Union[List[str], None] = Query(default=None)
 ) -> JSONResponse:
-    include_set = process_include(include=include, allowed=INCLUDES)
-    with req.app.state.db.session() as session:
-        vans: List[Van] = session.query(Van).all()
+    session = req.state.session
 
-        resp: List[Dict[str, Optional[Union[int, float, bool]]]] = [
-            {
-                "id": van.id,
-                "routeId": van.route_id,
-                "wheelchair": van.wheelchair,
-            }
-            for van in vans
-        ]
+    include_set = process_include(include=include, allowed=INCLUDES)
+    vans: List[Van] = session.query(Van).all()
+
+    resp: List[Dict[str, Optional[Union[int, float, bool]]]] = [
+        {
+            "id": van.id,
+            "routeId": van.route_id,
+            "wheelchair": van.wheelchair,
+        }
+        for van in vans
+    ]
 
     if INCLUDE_LOCATION in include_set:
         for van in resp:
@@ -71,58 +77,73 @@ def get_vans(
 
 
 @router.get("/{van_id}")
+@make_async
 def get_van(
     req: Request, van_id: int, include: Union[List[str], None] = Query(default=None)
 ) -> JSONResponse:
-    include_set = process_include(include=include, allowed=INCLUDES)
-    with req.app.state.db.session() as session:
-        van: Van = session.query(Van).filter_by(id=van_id).first()
-        if van is None:
-            return JSONResponse(content={"message": "Van not found"}, status_code=404)
+    session = req.state.session
 
-        resp = {
-            "id": van_id,
-            "routeId": van.route_id,
-            "wheelchair": van.wheelchair,
-        }
+    include_set = process_include(include=include, allowed=INCLUDES)
+    van: Van = session.query(Van).filter_by(id=van_id).first()
+    if van is None:
+        return JSONResponse(content={"message": "Van not found"}, status_code=404)
+
+    resp = {
+        "id": van_id,
+        "routeId": van.route_id,
+        "wheelchair": van.wheelchair,
+    }
 
     return JSONResponse(content=resp)
 
 
 @router.post("/")
-def post_van(req: Request, van_model: VanModel) -> JSONResponse:
-    with req.app.state.db.session() as session:
-        van = Van(route_id=van_model.route_id, wheelchair=van_model.wheelchair)
+@make_async
+def post_van(
+    req: Request, van_model: VanModel, user: Annotated[User, Depends(current_user)]
+) -> JSONResponse:
+    session = req.state.session
 
-        session.add(van)
-        session.commit()
+    van = Van(route_id=van_model.route_id, wheelchair=van_model.wheelchair)
+
+    session.add(van)
+    session.commit()
 
     return JSONResponse(content={"message": "OK"})
 
 
 @router.put("/{van_id}")
-def put_van(req: Request, van_id: int, van_model: VanModel) -> JSONResponse:
-    with req.app.state.db.session() as session:
-        van: Van = session.query(Van).filter_by(id=van_id).first()
-        if van is None:
-            return JSONResponse(content={"message": "Van not found"}, status_code=404)
+@make_async
+def put_van(
+    req: Request,
+    van_id: int,
+    van_model: VanModel,
+    user: Annotated[User, Depends(current_user)],
+) -> JSONResponse:
+    session = req.state.session
+    van: Van = session.query(Van).filter_by(id=van_id).first()
+    if van is None:
+        return JSONResponse(content={"message": "Van not found"}, status_code=404)
 
-        van.route_id = van_model.route_id
-        van.wheelchair = van_model.wheelchair
+    van.route_id = van_model.route_id
+    van.wheelchair = van_model.wheelchair
 
-        session.commit()
+    session.commit()
 
     return JSONResponse(content={"message": "OK"})
 
 
 @router.delete("/{van_id}")
-def delete_van(req: Request, van_id: int) -> JSONResponse:
-    with req.app.state.db.session() as session:
-        van: Van = session.query(Van).filter_by(id=van_id).first()
-        if van is None:
-            return JSONResponse(content={"message": "Van not found"}, status_code=404)
-        session.query(Van).filter_by(id=van_id).delete()
-        session.commit()
+@make_async
+def delete_van(
+    req: Request, van_id: int, user: Annotated[User, Depends(current_user)]
+) -> JSONResponse:
+    session = req.state.session
+    van: Van = session.query(Van).filter_by(id=van_id).first()
+    if van is None:
+        return JSONResponse(content={"message": "Van not found"}, status_code=404)
+    session.query(Van).filter_by(id=van_id).delete()
+    session.commit()
 
     return JSONResponse(content={"message": "OK"})
 
@@ -166,9 +187,10 @@ async def subscribe_location(websocket: WebSocket, van_id: int) -> None:
         await asyncio.sleep(2)
 
 
+@make_async
 def get_all_van_ids(req: Union[Request, WebSocket]) -> List[int]:
-    with req.app.state.db.session() as session:
-        return [van_id for (van_id,) in session.query(Van).with_entities(Van.id).all()]
+    session = req.state.session
+    return [van_id for (van_id,) in session.query(Van).with_entities(Van.id).all()]
 
 
 def get_location_for_vans(
@@ -206,7 +228,9 @@ def get_location_for_van(
 
 
 @router.post("/location/{van_id}")
-async def post_location(req: Request, van_id: int) -> HardwareOKResponse:
+async def post_location(
+    req: Request, van_id: int, user: Annotated[User, Depends(current_user)]
+) -> HardwareOKResponse:
     # byte body: long long for timestamp, double for lat, double for lon
     body = await req.body()
     timestamp_ms, lat, lon = struct.unpack("<Qdd", body)
@@ -240,19 +264,22 @@ async def post_location(req: Request, van_id: int) -> HardwareOKResponse:
     # cache entry and stop list. It's better to do this once rather than coupling it with
     # push_location due to the very expensive stop query we have to do.
     if van_id not in req.app.state.van_tracker:
-        with req.app.state.db.session() as session:
+        async with req.app.state.db.async_session() as asession:
             # Need to find the likely list of stops this van will go on. It's assumed that
             # this will only change between van activations, so we can query once and then
             # cache this list.
             stops = (
-                session.query(Stop)
-                .join(RouteStop, Stop.id == RouteStop.stop_id)
-                # Make sure all stops will be in order since that's critical for the time estimate
-                .order_by(RouteStop.position)
-                .join(Van, Van.route_id == RouteStop.route_id)
-                .filter(Van.id == van_id)
-                # Ignore inactive stops we won't be going to and thus don't need to estimate times for
-                .filter(Stop.active == True)
+                await asession.execute(
+                    select(Stop)
+                    .join(RouteStop, Stop.id == RouteStop.stop_id)
+                    # Make sure all stops will be in order since that's critical for the time estimate
+                    .order_by(RouteStop.position)
+                    .join(Van, Van.route_id == RouteStop.route_id)
+                    .filter(Van.id == van_id)
+                    # Ignore inactive stops we won't be going to and thus don't need to estimate times for
+                    .filter(Stop.active == True)
+                )
+                .scalars()
                 .all()
             )
 

@@ -4,7 +4,7 @@ from sqlalchemy import DateTime, TypeDecorator
 
 
 class TZDateTime(TypeDecorator):
-    impl = DateTime
+    impl = DateTime(timezone=True)
     cache_ok = True
 
     def process_bind_param(self, value, dialect):

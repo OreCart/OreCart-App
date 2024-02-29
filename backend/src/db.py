@@ -1,17 +1,23 @@
 import os
 
-import sqlalchemy
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Session
 
 
 class DBWrapper:
     def __init__(self):
-        self.engine = sqlalchemy.create_engine(
+        self.engine = create_async_engine(
             os.environ["DATABASE_URL"], pool_size=15, max_overflow=5
         )
 
+    def async_session(self) -> AsyncSession:
+        return AsyncSession(self.engine)
+
     def session(self) -> Session:
-        return Session(self.engine)
+        # everything except the FastAPI Users code uses non-async code. This makes it
+        # possible to use FastAPI Users without modifying existing database code to be
+        # asynchronous.
+        return Session(self.engine.sync_engine)
 
 
 class Base(DeclarativeBase):

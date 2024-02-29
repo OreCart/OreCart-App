@@ -4,14 +4,18 @@ Routes for tracking ridership statistics.
 
 import struct
 from datetime import datetime, timedelta, timezone
-from typing import Dict, List, Optional, Union
+from typing import Annotated, Dict, List, Optional, Union
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, model_validator
+from sqlalchemy import select
 from sqlalchemy.sql import ColumnElement
+from src.auth.make_async import make_async
+from src.auth.user_manager import current_user
 from src.hardware import HardwareErrorCode, HardwareHTTPException, HardwareOKResponse
 from src.model.analytics import Analytics
+from src.model.user import User
 from src.model.van import Van
 
 router = APIRouter(prefix="/analytics/ridership", tags=["analytics", "ridership"])
@@ -59,7 +63,9 @@ class RidershipFilterModel(BaseModel):
 
 
 @router.post("/{van_id}")
-async def post_ridership_stats(req: Request, van_id: int):
+async def post_ridership_stats(
+    req: Request, van_id: int, user: Annotated[User, Depends(current_user)]
+):
     """
     This route is used by the hardware components to send ridership statistics to be
     logged in the database. The body of the request is a packed byte array containing
@@ -92,10 +98,12 @@ async def post_ridership_stats(req: Request, van_id: int):
             status_code=400, error_code=HardwareErrorCode.TIMESTAMP_IN_FUTURE
         )
 
-    with req.app.state.db.session() as session:
+    async with req.app.state.db.async_session() as asession:
         # Find the route that the van is currently on, required by the ridership database.
         # If there is no route, then the van does not exist or is not running.
-        van = session.query(Van).filter_by(id=van_id).first()
+        van = (
+            await asession.execute(select(Van).filter_by(id=van_id).limit(1))
+        ).first()
         if not van:
             raise HardwareHTTPException(
                 status_code=404, error_code=HardwareErrorCode.VAN_NOT_ACTIVE
@@ -104,11 +112,13 @@ async def post_ridership_stats(req: Request, van_id: int):
         # Check that the timestamp is the most recent one for the van. This prevents
         # updates from being sent out of order, which could mess up the statistics.
         most_recent = (
-            session.query(Analytics)
-            .filter_by(van_id=van_id)
-            .order_by(Analytics.datetime.desc())
-            .first()
-        )
+            await asession.execute(
+                select(Analytics)
+                .filter_by(van_id=van_id)
+                .order_by(Analytics.datetime.desc())
+                .limit(1)
+            )
+        ).first()
         if most_recent is not None and timestamp <= most_recent.datetime:
             raise HardwareHTTPException(
                 status_code=400, error_code=HardwareErrorCode.TIMESTAMP_NOT_MOST_RECENT
@@ -124,22 +134,25 @@ async def post_ridership_stats(req: Request, van_id: int):
             lon=lon,
             datetime=timestamp,
         )
-        session.add(new_ridership)
-        session.commit()
+        asession.add(new_ridership)
+        await asession.commit()
 
     return HardwareOKResponse()
 
 
 @router.get("/")
+@make_async
 def get_ridership(
-    req: Request, filters: Optional[RidershipFilterModel]
+    req: Request,
+    filters: Optional[RidershipFilterModel],
+    user: Annotated[User, Depends(current_user)],
 ) -> List[Dict[str, Union[str, int, float]]]:
-    with req.app.state.db.session() as session:
-        analytics: List[Analytics] = []
-        if filters is None or filters.filters is None:
-            analytics = session.query(Analytics).all()
-        else:
-            analytics = session.query(Analytics).filter(*filters.filters).all()
+    session = req.state.session
+    analytics: List[Analytics] = []
+    if filters is None or filters.filters is None:
+        analytics = session.query(Analytics).all()
+    else:
+        analytics = session.query(Analytics).filter(*filters.filters).all()
 
     # convert analytics to json
     analytics_json: List[Dict[str, Union[str, int, float]]] = []

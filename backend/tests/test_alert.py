@@ -12,6 +12,7 @@ from src.handlers.alert import (
     update_alert,
 )
 from src.model.alert import Alert
+from src.model.user import User
 
 
 @pytest.fixture
@@ -57,12 +58,13 @@ def new_mock_req(session):
     return req
 
 
-def test_get_alerts(mock_route_args, mock_alerts):
+@pytest.mark.asyncio
+async def test_get_alerts(mock_route_args, mock_alerts):
     mock_route_args.session.add_all(mock_alerts)
     mock_route_args.session.commit()
 
     # Act
-    response = get_alerts(mock_route_args.req)
+    response = await get_alerts(mock_route_args.req)
 
     # Assert
     assert response == [
@@ -76,12 +78,13 @@ def test_get_alerts(mock_route_args, mock_alerts):
     ]
 
 
-def test_get_active_alerts(mock_route_args, mock_alerts):
+@pytest.mark.asyncio
+async def test_get_active_alerts(mock_route_args, mock_alerts):
     mock_route_args.session.add_all(mock_alerts)
     mock_route_args.session.commit()
 
     # Act
-    response = get_alerts(mock_route_args.req, "active")
+    response = await get_alerts(mock_route_args.req, "active")
 
     # Assert
     assert response == [
@@ -94,12 +97,13 @@ def test_get_active_alerts(mock_route_args, mock_alerts):
     ]
 
 
-def test_get_future_alerts(mock_route_args, mock_alerts):
+@pytest.mark.asyncio
+async def test_get_future_alerts(mock_route_args, mock_alerts):
     mock_route_args.session.add_all(mock_alerts)
     mock_route_args.session.commit()
 
     # Act
-    response = get_alerts(mock_route_args.req, "future")
+    response = await get_alerts(mock_route_args.req, "future")
 
     # Assert
     assert response == [
@@ -112,21 +116,23 @@ def test_get_future_alerts(mock_route_args, mock_alerts):
     ]
 
 
-def test_get_alerts_invalid_filter(mock_route_args, mock_alerts):
+@pytest.mark.asyncio
+async def test_get_alerts_invalid_filter(mock_route_args, mock_alerts):
     mock_route_args.session.add_all(mock_alerts)
     mock_route_args.session.commit()
 
     # Act
     with pytest.raises(HTTPException) as e:
-        get_alerts(mock_route_args.req, "blah")
+        await get_alerts(mock_route_args.req, "blah")
 
 
-def test_get_alert(mock_route_args, mock_alerts):
+@pytest.mark.asyncio
+async def test_get_alert(mock_route_args, mock_alerts):
     mock_route_args.session.add_all(mock_alerts)
     mock_route_args.session.commit()
 
     # Act
-    response = get_alert(mock_route_args.req, 1)
+    response = await get_alert(mock_route_args.req, 1)
 
     # Assert
     assert response == {
@@ -137,7 +143,8 @@ def test_get_alert(mock_route_args, mock_alerts):
     }
 
 
-def test_post_alert(mock_route_args, mock_alert):
+@pytest.mark.asyncio
+async def test_post_alert(mock_route_args, mock_alert):
     # Arrange
     alert_model = AlertModel(
         text=mock_alert.text,
@@ -146,7 +153,7 @@ def test_post_alert(mock_route_args, mock_alert):
     )
 
     # Act
-    response = post_alert(mock_route_args.req, alert_model)
+    response = await post_alert(mock_route_args.req, alert_model, User())
 
     # Assert
     assert response == {"message": "OK"}
@@ -156,7 +163,8 @@ def test_post_alert(mock_route_args, mock_alert):
     )
 
 
-def test_update_alert(mock_route_args, mock_alert):
+@pytest.mark.asyncio
+async def test_update_alert(mock_route_args, mock_alert):
     # Arrange
     mock_route_args.session.add(mock_alert)
     new_mock_alert = Alert(
@@ -172,7 +180,9 @@ def test_update_alert(mock_route_args, mock_alert):
     )
 
     # Act
-    response = update_alert(mock_route_args.req, mock_alert.id, new_alert_model)
+    response = await update_alert(
+        mock_route_args.req, mock_alert.id, new_alert_model, User()
+    )
 
     # Assert
     assert response == {"message": "OK"}
@@ -182,12 +192,13 @@ def test_update_alert(mock_route_args, mock_alert):
     )
 
 
-def test_delete_alert(mock_route_args, mock_alert):
+@pytest.mark.asyncio
+async def test_delete_alert(mock_route_args, mock_alert):
     # Arrange
     mock_route_args.session.add(mock_alert)
 
     # Act
-    response = delete_alert(mock_route_args.req, mock_alert.id)
+    response = await delete_alert(mock_route_args.req, mock_alert.id, User())
 
     # Assert
     assert response == {"message": "OK"}

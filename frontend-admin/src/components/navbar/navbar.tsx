@@ -17,6 +17,7 @@ const NavBar: React.FC<NavBarProps> = () => {
           <li><NavLink to="/routes">Routes</NavLink></li>
           <li><NavLink to="/ridership">Ridership</NavLink></li>
           <li><NavLink to="/accommodations">Accommodations</NavLink></li>
+          <li><NavLink to="/login">Log In</NavLink></li>
         </ul>
       </nav>
       <div className='divider'></div>

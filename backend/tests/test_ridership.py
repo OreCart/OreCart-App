@@ -11,6 +11,7 @@ from src.handlers.ridership import (
 from src.hardware import HardwareErrorCode, HardwareHTTPException, HardwareOKResponse
 from src.model.analytics import Analytics
 from src.model.route import Route
+from src.model.user import User
 from src.model.van import Van
 
 
@@ -57,7 +58,9 @@ async def test_post_ridership_stats_with_prior(mock_route_args, mock_van_model):
     mock_route_args.session.commit()
 
     # Act
-    response = await post_ridership_stats(mock_route_args.req, mock_van_model.id)
+    response = await post_ridership_stats(
+        mock_route_args.req, mock_van_model.id, User()
+    )
 
     # Assert
     assert response == HardwareOKResponse()
@@ -74,7 +77,9 @@ async def test_post_ridership_stats_without_prior(mock_route_args, mock_van_mode
     mock_route_args.session.commit()
 
     # Act
-    response = await post_ridership_stats(mock_route_args.req, mock_van_model.id)
+    response = await post_ridership_stats(
+        mock_route_args.req, mock_van_model.id, User()
+    )
 
     # Assert
     assert response == HardwareOKResponse()
@@ -92,7 +97,7 @@ async def test_post_ridership_stats_too_far_in_past(mock_route_args, mock_van_mo
 
     # Act
     with pytest.raises(HardwareHTTPException) as e:
-        await post_ridership_stats(mock_route_args.req, mock_van_model.id)
+        await post_ridership_stats(mock_route_args.req, mock_van_model.id, User())
 
     # Assert
     assert e.value.status_code == 400
@@ -111,7 +116,7 @@ async def test_post_ridership_stats_in_future(mock_route_args, mock_van_model):
 
     # Act
     with pytest.raises(HardwareHTTPException) as e:
-        await post_ridership_stats(mock_route_args.req, mock_van_model.id)
+        await post_ridership_stats(mock_route_args.req, mock_van_model.id, User())
 
     # Assert
     assert e.value.status_code == 400
@@ -132,7 +137,7 @@ async def test_post_ridership_van_not_active_invalid_param(
 
     # Act
     with pytest.raises(HardwareHTTPException) as e:
-        await post_ridership_stats(mock_route_args.req, 16)
+        await post_ridership_stats(mock_route_args.req, 16, User())
 
     # Assert
     assert e.value.status_code == 404
@@ -149,7 +154,7 @@ async def test_post_ridership_van_not_active_valid_param(mock_route_args):
 
     # Act
     with pytest.raises(HardwareHTTPException) as e:
-        await post_ridership_stats(mock_route_args.req, 1)
+        await post_ridership_stats(mock_route_args.req, 1, User())
 
     # Assert
     assert e.value.status_code == 404
@@ -170,7 +175,7 @@ async def test_post_ridership_stats_not_most_recent(mock_route_args, mock_van_mo
 
     # Act
     with pytest.raises(HardwareHTTPException) as e:
-        await post_ridership_stats(mock_route_args.req, mock_van_model.id)
+        await post_ridership_stats(mock_route_args.req, mock_van_model.id, User())
 
     # Assert
     assert e.value.status_code == 400
@@ -356,5 +361,5 @@ def test_get_ridership(mock_route_args, filter_params, expected_count):
     )
     mock_route_args.session.commit()
 
-    response = get_ridership(mock_route_args.req, filter_params)
+    response = get_ridership(mock_route_args.req, filter_params, User())
     assert len(response) == expected_count

@@ -35,6 +35,7 @@ const AlertsPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
+        credentials: 'include',
       });
       if (!response.ok) {
         throw new Error('Network response was not ok');
@@ -65,6 +66,7 @@ const AlertsPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
+        credentials: 'include',
       });
       if (!response.ok) {
         throw new Error('Network response was not ok');
@@ -82,6 +84,7 @@ const AlertsPage: React.FC = () => {
     try {
       const response = await fetch(`${baseUrl}/alerts/${currentAlertId}`, {
         method: 'DELETE',
+        credentials: 'include',
       });
       if (!response.ok) {
         throw new Error('Network response was not ok');
