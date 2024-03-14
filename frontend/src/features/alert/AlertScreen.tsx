@@ -7,6 +7,7 @@ import SkeletonList from "../../common/components/SkeletonList";
 import Spacer from "../../common/components/Spacer";
 import { type OuterParamList } from "../../common/navTypes";
 import Color from "../../common/style/color";
+import { fonts } from "../../common/style/fonts";
 
 import { AlertItem, AlertItemSkeleton } from "./AlertItem";
 import { useGetFutureAlertsQuery } from "./alertSlice";
@@ -64,7 +65,7 @@ export const AlertScreen = ({
         />
       ) : isError ? (
         <>
-          <Text style={styles.header}>
+          <Text style={[styles.header, fonts.heading]}>
             We couldn't fetch the alerts right now. Try again later.
           </Text>
           <RetryButton retry={retry} />

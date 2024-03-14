@@ -21,6 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import FloatingButton from "../common/components/FloatingButton";
 import { type InnerParamList, type OuterParamList } from "../common/navTypes";
 import Color from "../common/style/color";
+import { fonts } from "../common/style/fonts";
 import LayoutStyle from "../common/style/layout";
 import SpacingStyle from "../common/style/spacing";
 import { LandingScreen } from "../features/landing/LandingScreen";
@@ -89,7 +90,9 @@ const Home = ({ route, navigation }: HomeScreenProps): React.JSX.Element => {
             >
               <View style={styles.drawerItem}>
                 <MaterialIcons name="error-outline" size={24} color="black" />
-                <Text style={styles.drawerItemText}>Upcoming Alerts</Text>
+                <Text style={[styles.drawerItemText, fonts.heading]}>
+                  Upcoming Alerts
+                </Text>
               </View>
             </TouchableOpacity>
             {/* 
@@ -115,7 +118,7 @@ const Home = ({ route, navigation }: HomeScreenProps): React.JSX.Element => {
               </View>
             </TouchableOpacity> */}
 
-            <Text>Version {expoVersion}</Text>
+            <Text style={fonts.body}>Version {expoVersion}</Text>
           </View>
         );
       }}

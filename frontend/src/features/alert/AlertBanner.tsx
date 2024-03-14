@@ -10,6 +10,7 @@ import {
 
 import Spacer from "../../common/components/Spacer";
 import Color from "../../common/style/color";
+import { fonts } from "../../common/style/fonts";
 
 import { AlertItem } from "./AlertItem";
 import { useGetActiveAlertsQuery } from "./alertSlice";
@@ -45,7 +46,7 @@ const AlertBanner = (): React.JSX.Element | null => {
       >
         <View>
           <View style={styles.headerContainer}>
-            <Text style={styles.header}>Alert</Text>
+            <Text style={[styles.header, fonts.heading]}>Alert</Text>
             {/* Indicate the expansion status with an icon, or hide it if we don't need to be expandable. */}
             {expandable ? (
               <MaterialIcons
@@ -71,7 +72,7 @@ const AlertBanner = (): React.JSX.Element | null => {
           we would want to show it in full rather than require the user to expand it, given that we have the space. */
           expandable ? (
             <Text
-              style={styles.alertText}
+              style={[styles.alertText, fonts.body]}
             >{`${alerts.length} currently active`}</Text>
           ) : (
             <AlertItem alert={alerts[0]} />

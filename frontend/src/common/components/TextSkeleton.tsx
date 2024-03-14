@@ -32,6 +32,7 @@ const styles = StyleSheet.create({
     backgroundColor: Color.generic.skeleton,
     borderRadius: 32,
     color: "transparent",
+    fontFamily: undefined,
   },
 });
 

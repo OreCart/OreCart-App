@@ -7,6 +7,7 @@ import ErrorMessage from "../../common/components/ErrorMessage";
 import TextSkeleton from "../../common/components/TextSkeleton";
 import { type InnerParamList } from "../../common/navTypes";
 import Color from "../../common/style/color";
+import { fonts } from "../../common/style/fonts";
 import StopList from "../stops/StopList";
 import { useGetStopsQuery } from "../stops/stopsSlice";
 
@@ -74,8 +75,12 @@ const RouteHeader = ({ route }: { route: BasicRoute }): React.JSX.Element => {
 
   return (
     <View style={styles.container}>
-      <Text style={[styles.routeName, routeNameColorStyle]}>{route?.name}</Text>
-      <Text style={styles.routeDesc}>{getDescriptionWorkaround(route)}</Text>
+      <Text style={[styles.routeName, routeNameColorStyle, fonts.heading]}>
+        {route?.name}
+      </Text>
+      <Text style={[styles.routeDesc, fonts.body]}>
+        {getDescriptionWorkaround(route)}
+      </Text>
     </View>
   );
 };

@@ -8,6 +8,7 @@ import ErrorMessage from "../../common/components/ErrorMessage";
 import TextSkeleton from "../../common/components/TextSkeleton";
 import { type InnerParamList } from "../../common/navTypes";
 import Color from "../../common/style/color";
+import { fonts } from "../../common/style/fonts";
 import { useLocationStatus, type Coordinate } from "../location/locationSlice";
 import { distance, formatMiles, geoDistanceToMiles } from "../location/util";
 import RouteList from "../routes/RouteList";
@@ -87,9 +88,9 @@ const StopHeader = ({ stop }: { stop: BasicStop }): React.JSX.Element => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.stopName}>{stop.name}</Text>
+      <Text style={[styles.stopName, fonts.heading]}>{stop.name}</Text>
       {status.type === "active" ? (
-        <Text style={styles.stopDesc}>{stopDistance} away</Text>
+        <Text style={[styles.stopDesc, fonts.body]}>{stopDistance} away</Text>
       ) : status.type === "initializing" ? (
         <TextSkeleton style={styles.stopDesc} widthFraction={0.3} />
       ) : null}
@@ -100,7 +101,7 @@ const StopHeader = ({ stop }: { stop: BasicStop }): React.JSX.Element => {
           openDirections(stop);
         }}
       >
-        <Text style={styles.buttonText}>Get Directions</Text>
+        <Text style={[styles.buttonText, fonts.body]}>Get Directions</Text>
       </TouchableHighlight>
     </View>
   );

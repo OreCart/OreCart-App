@@ -10,6 +10,7 @@ import {
 
 import TextSkeleton from "../../common/components/TextSkeleton";
 import Color from "../../common/style/color";
+import { fonts } from "../../common/style/fonts";
 import { useLocation } from "../location/locationSlice";
 import {
   closest,
@@ -56,26 +57,26 @@ export const StopItem = ({
     >
       <View style={styles.innerContainer}>
         <View style={styles.stopInfoContainer}>
-          <Text style={styles.stopName}>{stop.name}</Text>
+          <Text style={[styles.stopName, fonts.heading]}>{stop.name}</Text>
           {stopState.distanceFromUser !== undefined ? (
-            <Text style={styles.stopStatus}>
-              <Text style={styles.stopStatusEmphasis}>
+            <Text style={[styles.stopStatus, fonts.body]}>
+              <Text style={[styles.stopStatusEmphasis, fonts.bodyBold]}>
                 {stopState.distanceFromUser}
               </Text>{" "}
               away
             </Text>
           ) : null}
           {stopState.vanArrivalTime !== undefined ? (
-            <Text style={styles.stopStatus}>
+            <Text style={[styles.stopStatus, fonts.body]}>
               Next OreCart in{" "}
               <Text style={styles.stopStatusEmphasis}>
                 {stopState.vanArrivalTime}
               </Text>
             </Text>
           ) : stop.isActive ? (
-            <Text style={styles.stopStatus}>Running</Text>
+            <Text style={[styles.stopStatus, fonts.body]}>Running</Text>
           ) : (
-            <Text style={styles.stopStatus}>Not running</Text>
+            <Text style={[styles.stopStatus, fonts.body]}>Not running</Text>
           )}
         </View>
         <MaterialIcons
