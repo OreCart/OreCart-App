@@ -1,11 +1,11 @@
 import React from "react";
-import { View, Text, TouchableHighlight, StyleSheet } from "react-native";
+import { StyleSheet, Text, TouchableHighlight, View } from "react-native";
 
 import { useAppDispatch } from "../../common/hooks";
 import Color from "../../common/style/color";
 
 import { requestLocationPermissions } from "./locationMiddleware";
-import { useLocationStatus } from "./locationSlice";
+import { useLocation } from "./locationSlice";
 
 /**
  * A banner component that requests the user to grant location permissions to
@@ -13,13 +13,13 @@ import { useLocationStatus } from "./locationSlice";
  */
 const LocationPermissionPrompt = (): React.JSX.Element | null => {
   const dispatch = useAppDispatch();
-  const locationStatus = useLocationStatus();
+  const location = useLocation();
 
   const handleGrantButtonPress = (): void => {
     dispatch(requestLocationPermissions());
   };
 
-  if (locationStatus.type !== "not_granted") {
+  if (location.error !== "Not granted") {
     return null;
   }
 
@@ -46,8 +46,6 @@ const styles = StyleSheet.create({
     backgroundColor: Color.csm.primary.pale_blue,
     padding: 16,
     borderRadius: 16,
-    marginHorizontal: 16,
-    marginBottom: 16,
   },
   message: {
     fontSize: 16,

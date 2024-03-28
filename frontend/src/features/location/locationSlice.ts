@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 
 import { useAppSelector } from "../../common/hooks";
+import { error, loading, success, type Query } from "../../common/query";
 
 /**
  * Implementation of latitude/longitude-based coordinates independent from any particular
@@ -11,58 +12,12 @@ export interface Coordinate {
   longitude: number;
 }
 
-/**
- * The status of location updates.
- */
-export type LocationStatus =
-  | Active
-  | Inactive
-  | Initializing
-  | NotGranted
-  | Error;
-
-/**
- * Location updates are currently being sent.
- */
-export interface Active {
-  type: "active";
-  location: Coordinate;
-}
-
-/**
- * Location updates are being initialized.
- */
-export interface Initializing {
-  type: "initializing";
-}
-
-/**
- * Location updates are not currently being sent.
- */
-export interface Inactive {
-  type: "inactive";
-}
-
-/**
- * The user has not granted location permissions yet.
- */
-export interface NotGranted {
-  type: "not_granted";
-}
-
-/**
- * An error occurred while trying to get location updates.
- */
-export interface Error {
-  type: "error";
-}
-
 interface LocationState {
-  status: LocationStatus;
+  status: Query<Coordinate>;
 }
 
 const initialState: LocationState = {
-  status: { type: "inactive" },
+  status: loading(),
 };
 
 /*
@@ -77,7 +32,7 @@ const locationSlice = createSlice({
   name: "location",
   initialState,
   reducers: {
-    updateLocationStatus: (state, action: PayloadAction<LocationStatus>) => {
+    updateLocationStatus: (state, action: PayloadAction<Query<Coordinate>>) => {
       state.status = action.payload;
     },
   },
@@ -87,18 +42,96 @@ const locationSlice = createSlice({
  * Hook for querying the current location. Will be undefined if not currently
  * available.
  */
-export const useLocation = (): Coordinate | undefined =>
-  useAppSelector((state) =>
-    state.location.status.type === "active"
-      ? state.location.status.location
-      : undefined,
-  );
+export const useLocation = (): Query<Coordinate> =>
+  useAppSelector((state) => state.location.status);
+export interface Closest<T> {
+  value: T;
+  distance: number;
+}
 
 /**
- * Hook for querying the current location status.
+ * Use the closest coordinate from a list of objects that are coordinates. Will return
+ * an error if the location is not available, or if there is no data given.
  */
-export const useLocationStatus = (): LocationStatus =>
-  useAppSelector((state) => state.location.status);
+export const useClosest = <T extends Coordinate>(
+  of: T[],
+): Query<Closest<T>> => {
+  const location = useLocation();
+  if (!location.isSuccess) {
+    return location;
+  }
+
+  const closest = of.reduce<Closest<T> | undefined>(
+    (acc: Closest<T> | undefined, cur: T) => {
+      const distance = Math.sqrt(
+        Math.pow(cur.latitude - location.data.latitude, 2) +
+          Math.pow(cur.longitude - location.data.longitude, 2),
+      );
+      if (acc === undefined || distance < acc.distance) {
+        return { value: cur, distance };
+      }
+      return acc;
+    },
+    undefined,
+  );
+
+  if (closest === undefined) {
+    return error("No closest found");
+  }
+
+  return success(closest);
+};
+
+export const useClosestQuery = <T extends Coordinate>(
+  of: Query<T[]>,
+): Query<Closest<T>> => {
+  const location = useLocation();
+  if (!location.isSuccess) {
+    return location;
+  }
+
+  if (!of.isSuccess) {
+    return of;
+  }
+
+  const closest = of.data.reduce<Closest<T> | undefined>(
+    (acc: Closest<T> | undefined, cur: T) => {
+      const distance = Math.sqrt(
+        Math.pow(cur.latitude - location.data.latitude, 2) +
+          Math.pow(cur.longitude - location.data.longitude, 2),
+      );
+      if (acc === undefined || distance < acc.distance) {
+        return { value: cur, distance };
+      }
+      return acc;
+    },
+    undefined,
+  );
+
+  if (closest === undefined) {
+    return error("No closest found");
+  }
+
+  return success(closest);
+};
+
+/**
+ * Use the distance of the coordinate-line object from the current location. Will return
+ * an error if the location is not available.
+ */
+export const useDistance = <T extends Coordinate>(at: T): Query<number> => {
+  const location = useLocation();
+  if (!location.isSuccess) {
+    return location;
+  }
+
+  const distance = Math.sqrt(
+    Math.pow(at.latitude - location.data.latitude, 2) +
+      Math.pow(at.longitude - location.data.longitude, 2),
+  );
+
+  return success(distance);
+};
 
 export const { updateLocationStatus } = locationSlice.actions;
 

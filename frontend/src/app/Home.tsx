@@ -20,6 +20,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import FloatingButton from "../common/components/FloatingButton";
+import Sheet from "../common/components/Sheet";
 import { type InnerParamList, type OuterParamList } from "../common/navTypes";
 import Color from "../common/style/color";
 import LayoutStyle from "../common/style/layout";
@@ -27,9 +28,9 @@ import SpacingStyle from "../common/style/spacing";
 import { LandingScreen } from "../features/landing/LandingScreen";
 import { manageLocationMiddleware } from "../features/location/locationMiddleware";
 import Map from "../features/map/Map";
-import Sheet from "../features/navigation/Sheet";
 import { RouteScreen } from "../features/routes/RouteScreen";
 import { StopScreen } from "../features/stops/StopScreen";
+import { manageArrivalEstimates } from "../features/vans/arrivalSlice";
 
 export interface HomeScreenProps {
   navigation: StackNavigationProp<OuterParamList, "Home">;
@@ -67,6 +68,7 @@ const Home = ({ route, navigation }: HomeScreenProps): React.JSX.Element => {
   const [atLanding, setAtLanding] = useState<boolean>(true);
 
   manageLocationMiddleware();
+  manageArrivalEstimates();
 
   return (
     <Drawer
@@ -130,7 +132,13 @@ const Home = ({ route, navigation }: HomeScreenProps): React.JSX.Element => {
       }}
     >
       <GestureHandlerRootView>
-        <Map style={LayoutStyle.fill} insets={mapInsets} />
+        <Map
+          style={LayoutStyle.fill}
+          insets={mapInsets}
+          onStopPressed={(stop) => {
+            navigation.push("Stop", { stopId: stop.id });
+          }}
+        />
         <View style={[LayoutStyle.overlay, SpacingStyle.pad(drawerInsets, 16)]}>
           <FloatingButton
             onPress={() => {
@@ -153,6 +161,7 @@ const Home = ({ route, navigation }: HomeScreenProps): React.JSX.Element => {
         <Sheet collapsedFraction={SHEET_EXTENT} expandedInset={96}>
           {/* Should disable headers on these screens since they arent full size. */}
           <Stack.Navigator
+            id={"Inner"}
             screenOptions={{
               headerShown: false,
               cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
@@ -166,6 +175,8 @@ const Home = ({ route, navigation }: HomeScreenProps): React.JSX.Element => {
                 const typedInnerNavigation =
                   innerNavigation as NavigationProp<InnerParamList>;
                 setAtLanding(!typedInnerNavigation.canGoBack());
+
+                // TODO: Store sheet state in history so we can restore it when navigating back.
               },
             })}
           >

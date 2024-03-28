@@ -8,6 +8,8 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
 from src.model.alert import Alert
+from src.model.route import Route
+from src.model.route_disable import RouteDisable
 from src.model.route_stop import RouteStop
 from src.model.stop import Stop
 from src.model.stop_disable import StopDisable
@@ -20,10 +22,10 @@ FIELD_LATITUDE = "latitude"
 FIELD_LONGITUDE = "longitude"
 FIELD_ROUTE_IDS = "routeIds"
 FIELD_IS_ACTIVE = "isActive"
-INCLUDES = {
-    FIELD_ROUTE_IDS,
-    FIELD_IS_ACTIVE,
-}
+FIELD_COLORS = "colors"
+FIELD_COLOR = "color"
+FIELD_ROUTES = "routes"
+INCLUDES = {FIELD_ROUTE_IDS, FIELD_IS_ACTIVE, FIELD_COLORS, FIELD_ROUTES}
 
 router = APIRouter(prefix="/stops", tags=["stops"])
 
@@ -63,6 +65,12 @@ def get_stops(
             if FIELD_IS_ACTIVE in include_set:
                 stop_json[FIELD_IS_ACTIVE] = is_stop_active(stop, alert, session)
 
+            if FIELD_COLORS in include_set:
+                stop_json[FIELD_COLORS] = query_stop_colors(stop.id, session)
+
+            if FIELD_ROUTES in include_set:
+                stop_json[FIELD_ROUTES] = query_routes(stop.id, alert, session)
+
             stops_json.append(stop_json)
 
         return stops_json
@@ -99,7 +107,75 @@ def get_stop(
         if FIELD_ROUTE_IDS in include_set:
             stop_json[FIELD_ROUTE_IDS] = query_route_ids(stop.id, session)
 
+        if FIELD_COLORS in include_set:
+            stop_json[FIELD_COLORS] = query_stop_colors(stop.id, session)
+
+        if FIELD_ROUTES in include_set:
+            stop_json[FIELD_ROUTES] = query_routes(stop.id, alert, session)
+
         return stop_json
+
+
+def query_stop_colors(stop_id: int, session) -> list[str]:
+    """
+    Queries and returns the color of the stop.
+    """
+
+    return [
+        color
+        for (color,) in session.query(Route)
+        .join(RouteStop)
+        .filter(RouteStop.stop_id == stop_id)
+        .with_entities(Route.color)
+        .all()
+    ]
+
+
+def query_routes(
+    stop_id: int, alert: Optional[Alert], session
+) -> list[dict[str, str | bool | int]]:
+    """
+    Queries and returns the routes that the given stop is assigned to.
+    """
+
+    return [
+        {
+            FIELD_ID: route.id,
+            FIELD_NAME: route.name,
+            FIELD_IS_ACTIVE: is_route_active(route.id, alert, session),
+            FIELD_COLOR: route.color,
+        }
+        for route in (
+            session.query(Route)
+            .join(RouteStop)
+            .filter(RouteStop.stop_id == stop_id)
+            .order_by(Route.id)
+            .all()
+        )
+    ]
+
+
+def is_route_active(route_id: int, alert: Optional[Alert], session) -> bool:
+    """
+    Queries and returns whether the frontend is currently active, i.e
+    not disabled by the current alert.
+    """
+
+    if not alert:
+        # No alert, should be active
+        return True
+
+    # If the route is disabled by the current alert, then it is not active.
+    enabled = (
+        session.query(RouteDisable)
+        .filter(
+            RouteDisable.alert_id == alert.id,
+            RouteDisable.route_id == route_id,
+        )
+        .count()
+    ) == 0
+
+    return enabled
 
 
 def query_route_ids(stop_id: int, session) -> list[int]:

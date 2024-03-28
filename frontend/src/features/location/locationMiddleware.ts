@@ -1,8 +1,9 @@
-import { createListenerMiddleware, createAction } from "@reduxjs/toolkit";
+import { createAction, createListenerMiddleware } from "@reduxjs/toolkit";
 import * as Location from "expo-location";
 import { useEffect } from "react";
 
 import { useAppDispatch } from "../../common/hooks";
+import { error, loading, success } from "../../common/query";
 
 import { updateLocationStatus } from "./locationSlice";
 
@@ -20,8 +21,9 @@ const ACCURACY = Location.Accuracy.BestForNavigation;
 let locationSubscription: Location.LocationSubscription | null = null;
 
 // The problem with location updates is that they are a callback-based API with sensitive lifecycle limitations
-// that we need to cram into the redux API. This middleware attempts to abstract this process with the following
-// lifecycle:
+// that we need to cram into the redux API. This could be done simpler with a manager hook like in other parts of
+// the app, but handling something like location permissions would then become impossible. This middleware attempts
+// to abstract this process with the following lifecycle:
 // 1. The top-level Main component calls manageLocationMiddleware(), which then sends a subscribe action to
 // the middleware. This creates the subscription and forwards them to the state in the location slice.
 // 2. The top-level Main component unmounts, which sends an unsubscribe action to the middleware. The middleware
@@ -46,11 +48,11 @@ locationMiddleware.startListening({
     if (status !== "granted") {
       // Permission was not granted, we can't do anything. Send the outcome
       // to the companion slice state.
-      listenerApi.dispatch(updateLocationStatus({ type: "not_granted" }));
+      listenerApi.dispatch(updateLocationStatus(error("Not granted")));
       return;
     }
 
-    listenerApi.dispatch(updateLocationStatus({ type: "initializing" }));
+    listenerApi.dispatch(updateLocationStatus(loading()));
 
     try {
       // Have to track the current subscription so we can unsubscribe later.
@@ -60,15 +62,19 @@ locationMiddleware.startListening({
           // Forward updates to the companion slice so that components can
           // use the current state.
           listenerApi.dispatch(
-            updateLocationStatus({
-              type: "active",
-              location: newLocation.coords,
-            }),
+            updateLocationStatus(
+              success({
+                latitude: newLocation.coords.latitude,
+                longitude: newLocation.coords.longitude,
+              }),
+            ),
           );
         },
       );
     } catch (e) {
-      listenerApi.dispatch(updateLocationStatus({ type: "error" }));
+      listenerApi.dispatch(
+        updateLocationStatus(error("Failed to start location tracking.")),
+      );
     }
   },
 });
@@ -86,7 +92,7 @@ locationMiddleware.startListening({
 
     locationSubscription.remove();
     locationSubscription = null;
-    listenerApi.dispatch(updateLocationStatus({ type: "inactive" }));
+    listenerApi.dispatch(updateLocationStatus(loading()));
   },
 });
 

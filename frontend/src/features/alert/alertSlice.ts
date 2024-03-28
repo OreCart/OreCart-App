@@ -36,8 +36,5 @@ const alertsApiSlice = apiSlice.injectEndpoints({
   }),
 });
 
-/**
- * Hook for querying the list of active alerts.
- */
 export const { useGetActiveAlertsQuery, useGetFutureAlertsQuery } =
   alertsApiSlice;

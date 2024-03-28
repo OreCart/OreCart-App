@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, type ViewProps } from "react-native";
+import { StyleSheet, Text, View, type ViewProps } from "react-native";
 
 import TextSkeleton from "../../common/components/TextSkeleton";
 import Color from "../../common/style/color";
@@ -68,7 +68,7 @@ export const AlertItem = ({
   }
 
   return (
-    <View {...rest}>
+    <View style={styles.containerFull} {...rest}>
       <Text style={styles.alertText}>{alert.text}</Text>
       {startTimestamp !== undefined ? (
         <Text style={styles.alertSubtext}>Starts {startTimestamp}</Text>
@@ -81,11 +81,9 @@ export const AlertItem = ({
 /**
  * A skeleton component that mimics the {@interface AlertItem} component.
  */
-export const AlertItemSkeleton = ({
-  ...rest
-}: ViewProps): React.JSX.Element => {
+export const AlertItemSkeleton = (): React.JSX.Element => {
   return (
-    <View {...rest}>
+    <View style={styles.containerSkeleton}>
       <TextSkeleton widthFraction={0.6} style={styles.alertText} />
       <TextSkeleton widthFraction={0.4} style={styles.alertSubtext} />
       <TextSkeleton widthFraction={0.4} style={styles.alertSubtext} />
@@ -94,6 +92,16 @@ export const AlertItemSkeleton = ({
 };
 
 const styles = StyleSheet.create({
+  containerFull: {
+    backgroundColor: Color.generic.alert.primary,
+    borderRadius: 16,
+    padding: 16,
+  },
+  containerSkeleton: {
+    padding: 16,
+    backgroundColor: Color.generic.selection,
+    borderRadius: 16,
+  },
   alertText: {
     fontSize: 16,
     color: Color.generic.white,

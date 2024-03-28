@@ -23,6 +23,7 @@ from src.model.route import Route
 from src.model.route_disable import RouteDisable
 from src.model.route_stop import RouteStop
 from src.model.stop import Stop
+from src.model.stop_disable import StopDisable
 from src.model.van_tracker_session import VanTrackerSession
 from src.model.waypoint import Waypoint
 from src.request import process_include
@@ -36,11 +37,9 @@ FIELD_IS_ACTIVE = "isActive"
 FIELD_LATITUDE = "latitude"
 FIELD_LONGITUDE = "longitude"
 FIELD_DESCRIPTION = "description"
-INCLUDES = {
-    FIELD_STOP_IDS,
-    FIELD_WAYPOINTS,
-    FIELD_IS_ACTIVE,
-}
+FIELD_STOPS = "stops"
+FIELD_COLOR = "color"
+INCLUDES = {FIELD_STOP_IDS, FIELD_WAYPOINTS, FIELD_IS_ACTIVE, FIELD_STOPS}
 
 router = APIRouter(prefix="/routes", tags=["routes"])
 
@@ -70,6 +69,7 @@ def get_routes(
                 FIELD_ID: route.id,
                 FIELD_NAME: route.name,
                 FIELD_DESCRIPTION: route.description,
+                FIELD_COLOR: route.color,
             }
 
             # Add related values to the route if included
@@ -81,6 +81,9 @@ def get_routes(
 
             if FIELD_IS_ACTIVE in include_set:
                 route_json[FIELD_IS_ACTIVE] = is_route_active(route.id, alert, session)
+
+            if FIELD_STOPS in include_set:
+                route_json[FIELD_STOPS] = query_route_stops(route.id, alert, session)
 
             routes_json.append(route_json)
 
@@ -214,6 +217,7 @@ def get_route(
             FIELD_ID: route.id,
             FIELD_NAME: route.name,
             FIELD_DESCRIPTION: route.description,
+            FIELD_COLOR: route.color,
         }
 
         # Add related values to the route if included
@@ -227,7 +231,58 @@ def get_route(
             alert = get_current_alert(datetime.now(timezone.utc), session)
             route_json[FIELD_IS_ACTIVE] = is_route_active(route.id, alert, session)
 
+        if FIELD_STOPS in include_set:
+            route_json[FIELD_STOPS] = query_route_stops(route.id, alert, session)
+
         return route_json
+
+
+def query_route_stops(route_id: int, alert: Optional[Alert], session):
+    """
+    Queries and returns the stops for the given route ID.
+    """
+
+    stops = (
+        session.query(Stop)
+        .order_by(RouteStop.position)
+        .filter(Stop.id == RouteStop.stop_id)
+        .filter(RouteStop.route_id == route_id)
+        .all()
+    )
+    return [
+        {
+            FIELD_ID: stop.id,
+            FIELD_NAME: stop.name,
+            FIELD_LATITUDE: stop.lat,
+            FIELD_LONGITUDE: stop.lon,
+            FIELD_IS_ACTIVE: is_stop_active(stop, alert, session),
+        }
+        for stop in stops
+    ]
+
+
+def is_stop_active(stop: Stop, alert: Optional[Alert], session) -> bool:
+    """
+    Queries and returns whether the given stop is currently active, i.e it's marked as
+    active in the database and there is no alert that is disabling it.
+    """
+
+    if not alert:
+        # No alert, fall back to if the current stop is marked as active.
+        return stop.active
+
+    # If the stop is disabled by the current alert, then it is not active.
+    enabled = (
+        session.query(StopDisable)
+        .filter(
+            StopDisable.alert_id == alert.id,
+            StopDisable.stop_id == stop.id,
+        )
+        .count()
+    ) == 0
+
+    # Might still be disabled even if the current alert does not disable the stop.
+    return stop.active and enabled
 
 
 def query_route_stop_ids(route_id: int, session):
@@ -353,6 +408,14 @@ async def create_route(req: Request, kml_file: UploadFile):
                 if isinstance(style, PolyStyle):
                     color = style.color
                     break
+
+            if route_name == "Tungsten":
+                color = "#cc4628"
+            elif route_name == "Silver":
+                color = "#879ec3"
+            elif route_name == "Gold":
+                color = "#f1b91a"
+
             # Want the text contents of all of the surface-level divs and then strip
             # all of the tags of it's content
 

@@ -75,6 +75,11 @@ export function formatMiles(distance: number): string {
   }
 }
 
+/**
+ * Formats a seconds time in human-readable format.
+ * @param seconds The time in seconds.
+ * @returns The time in human-readable format.
+ */
 export const formatSecondsAsMinutes = (seconds: number): string => {
   if (seconds < 60) {
     return `<1 min`;

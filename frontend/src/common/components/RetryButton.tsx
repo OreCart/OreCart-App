@@ -1,17 +1,21 @@
 import React from "react";
 import {
-  TouchableHighlight,
-  Text,
   StyleSheet,
+  Text,
+  TouchableHighlight,
   type ViewProps,
 } from "react-native";
 
 import Color from "../style/color";
 
 interface RetryButtonProps extends ViewProps {
+  /** Called when the button is pressed */
   retry: () => void;
 }
 
+/**
+ * A generic retry button component.
+ */
 const RetryButton = ({
   retry,
   ...rest

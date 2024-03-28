@@ -42,6 +42,7 @@ const App = (): React.JSX.Element => (
       <View style={LayoutStyle.fill}>
         <NavigationContainer>
           <Stack.Navigator
+            id={"Outer"}
             screenOptions={{
               headerStyle: {
                 shadowColor: "#000",

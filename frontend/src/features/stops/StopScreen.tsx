@@ -4,95 +4,83 @@ import React from "react";
 import { Linking, Platform, StyleSheet, Text, View } from "react-native";
 import { TouchableHighlight } from "react-native-gesture-handler";
 
-import ErrorMessage from "../../common/components/ErrorMessage";
+import ParentChildList from "../../common/components/ParentChildList";
+import QueryText from "../../common/components/QueryText";
 import TextSkeleton from "../../common/components/TextSkeleton";
 import { type InnerParamList } from "../../common/navTypes";
+import { wrapReduxQuery } from "../../common/query";
 import Color from "../../common/style/color";
-import { useLocationStatus, type Coordinate } from "../location/locationSlice";
-import { distance, formatMiles, geoDistanceToMiles } from "../location/util";
-import RouteList from "../routes/RouteList";
-import { useGetRoutesQuery } from "../routes/routesSlice";
+import { useDistance, type Coordinate } from "../location/locationSlice";
+import { formatMiles, geoDistanceToMiles } from "../location/util";
+import { changeMapFocus, type MapFocus } from "../map/mapSlice";
+import { type Route } from "../routes/routesSlice";
 
-import { useGetStopQuery, type BasicStop } from "./stopsSlice";
+import { StopRouteItem, StopRouteItemSkeleton } from "./StopRouteItem";
+import { useGetStopQuery, type ParentStop } from "./stopsSlice";
 
 export interface StopScreenProps {
   navigation: StackNavigationProp<InnerParamList, "Stop">;
   route: RouteProp<InnerParamList, "Stop">;
 }
 
+/**
+ * Shows stop information and parent routes. Will refocus the map onto the stop/
+ */
 export const StopScreen = ({
   route,
   navigation,
 }: StopScreenProps): React.JSX.Element => {
-  const {
-    data: stop,
-    isError: stopError,
-    refetch: refetchStops,
-  } = useGetStopQuery(route.params.stopId);
-
-  const {
-    data: routes,
-    isError: routesError,
-    refetch: refetchRoutes,
-  } = useGetRoutesQuery();
-
-  function retryStop(): void {
-    refetchStops().catch(console.error);
-  }
-
-  function retryRoutes(): void {
-    refetchRoutes().catch(console.error);
-  }
-
-  let stopRoutes;
-  if (routes !== undefined && stop !== undefined) {
-    stopRoutes = routes.filter((route) => stop.routeIds.includes(route.id));
-  }
+  const stop = useGetStopQuery(route.params.stopId);
+  const stopFocus: MapFocus | undefined = stop.isSuccess
+    ? { type: "SingleStop", stop: stop.data }
+    : undefined;
+  changeMapFocus(stopFocus);
 
   return (
-    <View>
-      {stopError || routesError ? (
-        <ErrorMessage
-          style={styles.message}
-          message="We couldn't fetch the stop right now. Try again later."
-          retry={() => {
-            retryRoutes();
-            retryStop();
-          }}
-        />
-      ) : (
-        <RouteList
-          mode="basic"
-          routes={stopRoutes}
-          inStop={stop}
-          renderStop={(stop) => <StopHeader stop={stop} />}
-          renderStopSkeleton={() => <StopSkeleton />}
-          onPress={(route) => {
+    <ParentChildList
+      style={styles.listContainer}
+      header={(stop: ParentStop) => <StopHeader stop={stop} />}
+      headerSkeleton={() => <StopHeaderSkeleton />}
+      item={(stop: ParentStop, route: Route) => (
+        <StopRouteItem
+          route={route}
+          stop={stop}
+          onPress={(route: Route) => {
             navigation.push("Route", { routeId: route.id });
           }}
         />
       )}
-    </View>
+      itemSkeleton={() => <StopRouteItemSkeleton />}
+      divider="line"
+      query={wrapReduxQuery<ParentStop>(stop)}
+      refresh={stop.refetch}
+      map={(stop: ParentStop) => stop.routes}
+      keyExtractor={(route: Route) => route.id.toString()}
+      bottomSheet={true}
+      errorMessage="Failed to load stop. Please try again."
+    />
   );
 };
 
-const StopHeader = ({ stop }: { stop: BasicStop }): React.JSX.Element => {
-  const status = useLocationStatus();
-  let stopDistance;
-  if (status.type === "active") {
-    stopDistance = formatMiles(
-      geoDistanceToMiles(distance(stop, status.location)),
-    );
-  }
+const StopHeader = ({ stop }: { stop: ParentStop }): React.JSX.Element => {
+  const distance = useDistance(stop);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.headerContainer}>
       <Text style={styles.stopName}>{stop.name}</Text>
-      {status.type === "active" ? (
-        <Text style={styles.stopDesc}>{stopDistance} away</Text>
-      ) : status.type === "initializing" ? (
-        <TextSkeleton style={styles.stopDesc} widthFraction={0.3} />
-      ) : null}
+      <QueryText
+        style={styles.stopDesc}
+        query={distance}
+        body={(distance: number) => (
+          <>
+            <Text style={styles.emphasis}>
+              {formatMiles(geoDistanceToMiles(distance))}
+            </Text>{" "}
+            away
+          </>
+        )}
+        skeletonWidth={0.3}
+      />
       <TouchableHighlight
         underlayColor={Color.generic.location_highlight}
         style={[styles.button, styles.locationButton]}
@@ -102,18 +90,20 @@ const StopHeader = ({ stop }: { stop: BasicStop }): React.JSX.Element => {
       >
         <Text style={styles.buttonText}>Get Directions</Text>
       </TouchableHighlight>
+      <Text style={styles.stopHeader}>Routes</Text>
     </View>
   );
 };
 
-const StopSkeleton = (): React.JSX.Element => {
+const StopHeaderSkeleton = (): React.JSX.Element => {
   return (
-    <View style={styles.container}>
+    <View style={styles.headerContainer}>
       <TextSkeleton style={styles.stopName} widthFraction={0.4} />
       <TextSkeleton style={styles.stopDesc} widthFraction={0.3} />
       <View style={[styles.button, styles.buttonSkeleton]}>
         <Text style={styles.buttonText}></Text>
       </View>
+      <TextSkeleton style={styles.stopHeader} widthFraction={0.4} />
     </View>
   );
 };
@@ -121,9 +111,17 @@ const StopSkeleton = (): React.JSX.Element => {
 const openDirections = (coordinate: Coordinate): void => {
   const location = `${coordinate.latitude},${coordinate.longitude}`;
   const url = Platform.select({
+    // Opens Apple Maps to immediately start navigation towards the stop
     ios: `http://maps.apple.com/?daddr=${location}`,
+    // Opens Google Maps to show navigation options towards the stop
     android: `google.navigation:q=${location}`,
   });
+
+  if (url === undefined) {
+    // Should never happen, just make typescript happy
+    console.error("Can't open directions on this platform");
+    return;
+  }
 
   Linking.canOpenURL(url)
     .then(async (supported) => {
@@ -137,9 +135,14 @@ const openDirections = (coordinate: Coordinate): void => {
       console.error("Can't launch directions", err);
     });
 };
+
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
+  listContainer: {
+    paddingHorizontal: 8,
+  },
+  headerContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   stopName: {
     fontSize: 32,
@@ -166,7 +169,7 @@ const styles = StyleSheet.create({
   button: {
     borderRadius: 100,
     padding: 10,
-    marginTop: 16,
+    marginVertical: 16,
     alignItems: "center",
   },
   locationButton: {
@@ -182,5 +185,13 @@ const styles = StyleSheet.create({
   },
   message: {
     marginVertical: 16,
+  },
+  emphasis: {
+    fontWeight: "bold",
+  },
+  stopHeader: {
+    fontSize: 20,
+    fontWeight: "bold",
+    paddingBottom: 8,
   },
 });

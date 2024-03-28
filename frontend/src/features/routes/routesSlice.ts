@@ -1,23 +1,37 @@
 import apiSlice from "../../app/apiSlice";
 import { type Coordinate } from "../location/locationSlice";
+import { type Stop } from "../stops/stopsSlice";
 
 /**
- * A list of routes, as defined by the backend.
+ * Minimum information sent by the server about a route.
  */
-export type Routes = ExtendedRoute[];
-
-export interface BasicRoute {
+export interface Route {
+  /** The id of the route. */
   id: number;
+  /** The name of the route. */
   name: string;
-  stopIds: number[];
+  /** Whether the route is currently active or has an outage. */
+  isActive: boolean;
+  /** The color of the route. */
+  color: string;
 }
 
 /**
- * A Route, as defined by the backend.
+ * A route with waypoints.
  */
-export interface ExtendedRoute extends BasicRoute {
+export interface WaypointRoute extends Route {
+  /** The coordinates outlining the path of the route. */
   waypoints: Coordinate[];
-  isActive: boolean;
+}
+
+/**
+ * A route with child stops.
+ */
+export interface ParentRoute extends WaypointRoute {
+  /** The stops of the route. */
+  stops: Stop[];
+  /** The description of the route (i.e where it goes). */
+  description: string;
 }
 
 // --- API Definition ---
@@ -29,13 +43,13 @@ export interface ExtendedRoute extends BasicRoute {
 const routesApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
     // eslint-disable-next-line @typescript-eslint/no-invalid-void-type
-    getRoutes: builder.query<Routes, void>({
-      query: () =>
-        "/routes/?include=stopIds&include=waypoints&include=isActive",
+    getRoutes: builder.query<WaypointRoute[], void>({
+      query: () => "/routes/?include=stops&include=waypoints&include=isActive",
       providesTags: ["Routes"],
     }),
-    getRoute: builder.query<BasicRoute, number>({
-      query: (id) => `/routes/${id}?include=stopIds`,
+    getRoute: builder.query<ParentRoute, number>({
+      query: (id) =>
+        `/routes/${id}?include=stops&include=waypoints&include=isActive`,
       providesTags: (_, __, id) => [{ type: "Route", id }],
     }),
   }),

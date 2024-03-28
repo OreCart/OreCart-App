@@ -1,12 +1,16 @@
 import React from "react";
-import { Text, StyleSheet, type TextProps, Dimensions } from "react-native";
+import { Dimensions, StyleSheet, Text, type TextProps } from "react-native";
 
 import Color from "../style/color";
 
 interface TextSkeletonProps extends TextProps {
+  /** The width of the skeleton text as a fraction of the screen width. */
   widthFraction: number;
 }
 
+/**
+ * A skeleton text element that can be used as a placeholder for real text elements.
+ */
 const TextSkeleton = ({
   widthFraction,
   style,
