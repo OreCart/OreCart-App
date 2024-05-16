@@ -12,8 +12,11 @@ from fastapi import (
     WebSocket,
     WebSocketDisconnect,
 )
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from sqlalchemy import func
+from src.controller.VanController import VanController
+from src.db.base import make_session
 from src.hardware import HardwareErrorCode, HardwareHTTPException, HardwareOKResponse
 from src.model.route import Route
 from src.model.route_stop import RouteStop
@@ -21,8 +24,11 @@ from src.model.stop import Stop
 from src.model.van_location import VanLocation
 from src.model.van_tracker_session import VanTrackerSession
 from src.request import process_include
+from src.vantracking.coordinate import Coordinate
+from src.vantracking.location import Location
 
 router = APIRouter(prefix="/vans", tags=["vans"])
+vanController = VanController()
 
 FIELD_ID = "id"
 FIELD_GUID = "guid"
@@ -53,6 +59,79 @@ DEGREES_IN_CIRCLE = 360  # degrees
 
 
 @router.get("/")
+async def get_vans(
+    req: Request, include: Union[List[str], None] = Query(default=None)
+) -> (
+    JSONResponse
+):  # TODO does this need to return a JSONResponse or do we need to type this?
+    """
+    ## Get all vans.
+
+    **:param include:** Optional list of fields to include. Valid values are:
+
+        - "location": includes the current location of the van
+
+    **:return:** A list of vans in the format
+
+        - id
+        - routeId
+        - guid
+    """
+    session_maker = make_session()
+    async with session_maker() as session:
+        return await vanController.get_vans(session)
+
+
+@router.get("/{van_id}")
+def get_van(
+    req: Request, van_id: int, include: Union[List[str], None] = Query(default=None)
+) -> JSONResponse:
+    """
+    ## Get a van by ID.
+
+    **:param van_id:** The unique integer ID of the van to retrieve
+
+    **:param include:** Optional list of fields to include. Valid values are:
+
+        - "location": includes the current location of the van
+
+    **:return:** A van in the format
+
+        - id
+        - routeId
+    """
+    include_set = process_include(include=include, allowed=INCLUDES)
+    with req.app.state.db.session() as session:
+        van: Van = session.query(Van).filter_by(id=van_id).first()
+        if van is None:
+            return JSONResponse(content={"message": "Van not found"}, status_code=404)
+
+        resp = {
+            "id": van_id,
+            "routeId": van.route_id,
+        }
+
+    return JSONResponse(content=resp)
+
+
+@router.get("/location/", response_class=Response)
+def get_locations(req: Request):
+    """
+    ## Get all van locations.
+
+    **:return:** JSON of all van locations, including:
+
+            - timestamp
+            - latitude
+            - longitude
+            - nextStopId
+            - secondsToNextStop
+    """
+
+    vans = get_all_van_ids(req)
+    return JSONResponse(content=get_location_for_vans(req, vans))
+
+
 async def get_van_v1(
     req: Request,
     include: Annotated[List[str] | None, Query()] = None,

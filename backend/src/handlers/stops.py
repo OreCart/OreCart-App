@@ -7,6 +7,7 @@ from typing import Annotated, Optional
 
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel
+from src.db.alert import AlertModel
 from src.model.alert import Alert
 from src.model.route import Route
 from src.model.route_disable import RouteDisable
@@ -221,19 +222,19 @@ def query_route_ids(stop_id: int, session) -> list[int]:
     ]
 
 
-def get_current_alert(now: datetime, session) -> Optional[Alert]:
+def get_current_alert(now: datetime, session) -> Optional[AlertModel]:
     """
     Queries and returns the current alert, if any, that is active at the given time.
     """
 
     return (
-        session.query(Alert)
-        .filter(Alert.start_datetime <= now, Alert.end_datetime >= now)
+        session.query(AlertModel)
+        .filter(AlertModel.start_datetime <= now, AlertModel.end_datetime >= now)
         .first()
     )
 
 
-def is_stop_active(stop: Stop, alert: Optional[Alert], session) -> bool:
+def is_stop_active(stop: Stop, alert: Optional[AlertModel], session) -> bool:
     """
     Queries and returns whether the given stop is currently active, i.e it's marked as
     active in the database and there is no alert that is disabling it.

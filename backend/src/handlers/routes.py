@@ -16,8 +16,8 @@ from fastkml import kml
 from fastkml.styles import LineStyle, PolyStyle
 from pydantic import BaseModel
 from pygeoif.geometry import Point, Polygon
+from src.db.alert import AlertModel
 from src.hardware import HardwareErrorCode, HardwareHTTPException, HardwareOKResponse
-from src.model.alert import Alert
 from src.model.pickup_spot import PickupSpot
 from src.model.route import Route
 from src.model.route_disable import RouteDisable
@@ -342,19 +342,19 @@ def query_route_waypoints(route_id: int, session):
     ]
 
 
-def get_current_alert(now: datetime, session) -> Optional[Alert]:
+def get_current_alert(now: datetime, session) -> Optional[AlertModel]:
     """
     Queries and returns the current alert, if any, that is active at the given time.
     """
 
     return (
-        session.query(Alert)
-        .filter(Alert.start_datetime <= now, Alert.end_datetime >= now)
+        session.query(AlertModel)
+        .filter(AlertModel.start_datetime <= now, AlertModel.end_datetime >= now)
         .first()
     )
 
 
-def is_route_active(route_id: int, alert: Optional[Alert], session) -> bool:
+def is_route_active(route_id: int, alert: Optional[AlertModel], session) -> bool:
     """
     Queries and returns whether the frontend is currently active, i.e
     not disabled by the current alert.

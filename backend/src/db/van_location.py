@@ -1,31 +1,31 @@
 from datetime import datetime
 
 from sqlalchemy import ForeignKey, ForeignKeyConstraint, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
-from src.db import Base
-from src.model.types import TZDateTime
+from src.db.base import Base
+from src.db.types import TZDateTime
 
 
-class VanLocation(Base):
+class VanLocationModel(Base):
     __tablename__ = "van_location"
-    __table_args__ = (ForeignKeyConstraint(["session_id"], ["van_tracker_session.id"]),)
 
     id: Mapped[int] = mapped_column(
-        primary_key=True, autoincrement=True, nullable=False
+        primary_key=True,
+        autoincrement=True,
     )
     created_at: Mapped[datetime] = mapped_column(
-        TZDateTime, nullable=False, server_default=func.now()  # pylint: disable=all
+        TZDateTime, server_default=func.now()  # pylint: disable=all
     )
-    session_id: Mapped[int] = mapped_column(
-        ForeignKey("van_tracker_session.id"), nullable=False
-    )
-    lat: Mapped[float] = mapped_column(nullable=False)
-    lon: Mapped[float] = mapped_column(nullable=False)
+    session_id: Mapped[int] = mapped_column(ForeignKey("van_tracker_session.id"))
+    lat: Mapped[float] = mapped_column()
+    lon: Mapped[float] = mapped_column()
+
+    session: Mapped["VanTrackerSession"] = relationship(back_populates="locations")
 
     def __eq__(self, other: object) -> bool:
         return (
-            isinstance(other, VanLocation)
+            isinstance(other, VanLocationModel)
             and self.created_at == other.created_at
             and self.session_id == other.session_id
             and self.lat == other.lat
