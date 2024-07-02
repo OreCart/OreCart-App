@@ -1,12 +1,4 @@
-export interface Route {
-  id: number;
-  name: string;
-}
-
-export interface Stop {
-  id: number;
-  name: string;
-}
+import { Route } from "../../api/types";
 
 export interface AddRouteFormProps {
   onSubmit: (data: FormData) => void; // or Promise<void> if async

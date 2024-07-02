@@ -12,6 +12,7 @@ import Root from "./templates/root";
 
 import { MantineProvider } from "@mantine/core";
 import "@mantine/core/styles.layer.css";
+import { VanStatusPage } from "./pages/van-status/van-status-page";
 const router = createBrowserRouter([
   {
     path: "/",
@@ -21,6 +22,7 @@ const router = createBrowserRouter([
         path: "/vans",
         element: <VanPage />,
       },
+      { path: "/van-status", element: <VanStatusPage /> },
       {
         path: "/ridership",
         element: <RidershipPage />,
@@ -46,7 +48,7 @@ const queryClient = new QueryClient();
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <QueryClientProvider client={queryClient}>
     <React.StrictMode>
-      <MantineProvider>
+      <MantineProvider forceColorScheme="light">
         <RouterProvider router={router} />
       </MantineProvider>
     </React.StrictMode>

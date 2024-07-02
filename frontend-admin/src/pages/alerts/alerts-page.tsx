@@ -108,12 +108,13 @@ const AlertsPage: React.FC = () => {
       <div className="cards-container">
         {alerts?.map((alert: Alert) => (
           <Card
-            title={`Alert ${alert.id}`}
             key={alert.id}
             onClick={() => {
               handleEdit(alert.id);
             }}
-          ></Card>
+          >
+            <h2>Alert ${alert.id}</h2>
+          </Card>
         ))}
       </div>
 

@@ -5,9 +5,16 @@
     gap: 16px;
     > .van-card {
       aspect-ratio: 1 / 1;
-      max-width: fit-content;
-      display: flex;
-      align-items: center;
+      min-width: 164px;
+      h2 {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      .c-colored-select {
+        margin-top: 4px;
+      }
     }
   }
   .add-button {

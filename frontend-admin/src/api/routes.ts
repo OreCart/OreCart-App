@@ -1,7 +1,26 @@
 import { QueryClient } from "@tanstack/react-query";
-import { Stop } from "../pages/routes/route-types";
-
+import { Route, Stop, Van, VanStatus } from "./types";
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
+
+export const getVanStatus = async () => {
+  const response = await fetch(`${baseUrl}/vans/v2`);
+  const data = await response.json() as VanStatus[];
+  return data;
+}
+
+export const getVans = async () => {
+  const response = await fetch(`${baseUrl}/vans/`);
+  const data = await response.json();
+  const van_data = (data as Van[]) || [];
+  return van_data;
+};
+
+export const getRoutes = async () => {
+  const response = await fetch(`${baseUrl}/routes/`);
+  const data = await response.json();
+  const route_data = data as Route[];
+  return route_data;
+};
 
 export const getKML = async () => {
   const response = await fetch(`${baseUrl}/routes/kmlfile`);
@@ -33,7 +52,7 @@ export const clearRoutes = async (queryClient: QueryClient) => {
   }
 };
 
-export const fetchStops = async (routeId: number) => {
+export const getStops = async (routeId: number) => {
   const response = await fetch(`${baseUrl}/routes/${routeId}/stops`);
   const data = await response.json();
   const stops_data = (data as Stop[]) || [];

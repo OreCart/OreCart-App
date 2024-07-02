@@ -1,0 +1,28 @@
+.c-colored-select {
+  // background: red;
+  // outline: 1px solid red;
+  .mantine-InputBase-wrapper {
+    > button {
+      background: color-mix(
+        in srgb,
+        var(--button-color),
+        rgba(255, 255, 255, 1) 40%
+      );
+      border: none;
+      border-radius: 8px;
+
+      font-weight: 600;
+    }
+  }
+  .mantine-Combobox-options {
+    display: grid;
+    gap: 3px;
+    .mantine-Combobox-option {
+      background: color-mix(
+        in srgb,
+        var(--option-color),
+        rgba(255, 255, 255, 1) 40%
+      );
+    }
+  }
+}

@@ -1,27 +1,20 @@
 import { Modal } from "@mantine/core";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import React, { useState } from "react";
-import { clearRoutes, fetchStops, getKML } from "../../api/routes";
+import { clearRoutes, getKML, getRoutes, getStops } from "../../api/routes";
+import { Route, Stop } from "../../api/types";
 import Card from "../../components/card/card";
 import AddRouteForm from "./add-route-form";
-import { Route, Stop } from "./route-types";
 import "./routes-page.scss";
 
 const baseUrl = import.meta.env.VITE_BACKEND_URL;
-
-const fetchRoutes = async () => {
-  const response = await fetch(`${baseUrl}/routes/`);
-  const data = await response.json();
-  const route_data = data as Route[];
-  return route_data;
-};
 
 const RoutesPage: React.FC = () => {
   const {
     data: routes,
     isLoading,
     error,
-  } = useQuery({ queryKey: ["routes"], queryFn: fetchRoutes });
+  } = useQuery({ queryKey: ["routes"], queryFn: getRoutes });
 
   const [currentRouteId, setCurrentRouteId] = useState<number>(-1);
   const [isRouteEditModalOpen, setIsRouteEditModalOpen] =
@@ -35,7 +28,7 @@ const RoutesPage: React.FC = () => {
     error: stopsError,
   } = useQuery({
     queryKey: ["stops", currentRouteId],
-    queryFn: () => fetchStops(currentRouteId),
+    queryFn: () => getStops(currentRouteId),
   });
 
   const queryClient = useQueryClient();
@@ -86,13 +79,16 @@ const RoutesPage: React.FC = () => {
       <div className="cards-container">
         {routes?.map((route: Route) => (
           <Card
-            title={`${route.name} (${route.id})`}
+            key={route.id}
             onClick={() => {
               setCurrentRouteId(route.id);
               setIsRouteEditModalOpen(true);
             }}
-            key={route.id}
-          ></Card>
+          >
+            <h2>
+              {route.name} {route.id}
+            </h2>
+          </Card>
         ))}
       </div>
 
